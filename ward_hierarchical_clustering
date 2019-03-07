@@ -1,0 +1,80 @@
+import pylab as pl
+from pylab import *
+import xlrd
+
+# ward层次聚类
+def dist(a,b):#二维平面中两点欧氏距离
+    return math.sqrt(math.pow(a[0]-b[0], 2)+math.pow(a[1]-b[1], 2))
+
+def findmindist(D):
+    length=len(D)
+    mindist=100
+    minp=0
+    minq=0
+    for p in range(length):
+        for q in range(p+1,length):
+            if mindist>D[p,q]:
+                minp=p
+                minq=q
+                mindist=D[p,q]
+    return mindist,minp,minq
+
+def ward(n,D,c):
+    # 初始化C和M
+    C=[]
+    M = D[:]
+    for i in range(n):
+        Ci = []
+        Ci.append(i)
+        C.append(Ci)
+    length =len(C)
+    while length > c:
+        min ,p, q= findmindist(M)
+        n_p=C[p].__len__()
+        n_q=C[q].__len__()
+        n_r=n_p+n_q
+        C[p].extend(C[q])
+        C.remove(C[q])
+        #更新类间距离矩阵
+        Mtemp= M[:]
+        for k in range(len(C)):
+            if k!=p and k!=q:
+                Mtemp[p, k]= ((len(C[k])+n_p)*M[p,k]+(len(C[k])+n_q)*M[q,k]-len(C[k])*M[p,q])/(len(C[k])+n_r)
+                Mtemp[k, p]=Mtemp[p,k]
+        Mtemp=np.delete(Mtemp,q,axis=0)
+        M=np.delete(Mtemp,q,axis=1)
+        length -= 1
+    return C
+
+#二维坐标点数据存在Excel文件中，从Excel文件中读取数据
+xlsfile = r"D:\档案库\MyDocuments\Microsoft Office\Powerpoint\课件\研究生\机器学习\降维\chap_7_大作业\chap_7_大作业\chap_7_大作业数据集.xlsx"# 打开指定路径中的xls文件
+book = xlrd.open_workbook(xlsfile)#得到Excel文件的book对象，实例化对象
+sheet0 = book.sheet_by_index(0) # 通过sheet索引获得sheet对象
+sheet_name = book.sheet_names()[0]# 获得指定索引的sheet表名字
+sheet1 = book.sheet_by_name(sheet_name)# 通过sheet名字来获取，当然如果知道sheet名字就可以直接指定
+nrows = sheet0.nrows    # 获取行总数
+
+x=[]
+#循环打印每一行的内容
+for i in range(nrows):
+    x.append(sheet1.row_values(i,0,2))
+
+n=len(x)
+d=mat(zeros((n,n)))
+for i in range(n):
+    d[i,i]=99
+    for j in range(i+1,n):
+        d[i,j]=float(dist(x[i],x[j]))
+        d[j,i]=d[i,j]
+
+c=ward(len(x),d,3)#ward层次聚类
+colValue = ['r', 'y', 'g', 'b', 'c', 'k', 'm']
+for i in range(len(c)):
+    coo_X = []  # x坐标列表
+    coo_Y = []  # y坐标列表
+    for j in range(len(c[i])):
+        coo_X.append(x[c[i][j]][0])
+        coo_Y.append(x[c[i][j]][1])
+    pl.scatter(coo_X, coo_Y, marker='x', color=colValue[i % len(colValue)], label=i)
+pl.legend(loc='upper right')
+pl.show()
